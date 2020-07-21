@@ -14,7 +14,7 @@ The original program was made by Anders W. Sandvik [[1]](http://physics.bu.edu/~
 - Any Fortran compiler
 
 
-**For Ubuntu users run with gfortran installed:**
+**For Ubuntu users with gfortran installed run in the terminal:**
 
 ```bash
 gfortran heisenberg_sse.f90 -o heisenberg && ./heisenberg
