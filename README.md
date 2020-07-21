@@ -1,4 +1,4 @@
-# SSE - Heisenberg spin $1/2$
+# SSE - Heisenberg spin 1/2
 
 A program made to simulate a quantum Heisenberg model with spin 1/2 in 1D, 2D or 3D lattice, all of them with periodic bondary condition.
 
