@@ -26,7 +26,7 @@ In this [lecture](http://physics.bu.edu/~sandvik/trieste12/tut1.pdf) you will fi
 
 **Example:**
 
-For a 1D Heiserberg model with spin 1/2 and periodic boundary condition, the exact ground state energy is Eg=-0.44395398. So, the mean energy per site should converge to  Eg as the inverse temperature beta goes to infinity, like in the figure below.
+For a 1D Heiserberg model with spin 1/2 and periodic boundary condition, the exact ground state energy is Eg=-0.44395398. So, the mean energy per spin should converge to  Eg as the inverse temperature beta goes to infinity, like in the figure below.
 
 ![Ground_state_energy](Graphs/Ground_state_energy.png)
 
