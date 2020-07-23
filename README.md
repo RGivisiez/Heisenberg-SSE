@@ -40,6 +40,7 @@ Evolution of the expansion cut-off:
 ![Cut-off](Graphs/Cut-off_adjust.png)
 
 Distribution of the number of H-operators:
+
 ![dist_n](Graphs/Prob_dist_n.png)
 
 ## License
