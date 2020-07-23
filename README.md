@@ -45,4 +45,4 @@ Distribution of the number of H-operators:
 
 ## License
 
-See the [LICENSE](LICENSE.md) file for license rights and limitations (License type).
+See the [LICENSE](LICENSE.md) file for license rights and limitations (MIT).
