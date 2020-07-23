@@ -73,6 +73,8 @@ Program Main
 
     Call free_memory
 
+    Call flush()
+
   end do
 
   Close(40)
