@@ -45,7 +45,7 @@ Distribution of the number of H-operators (n):
 
 **Phase transition in a cubic lattice:**
 
-In a cubic lattice this model has a phase transition at Tc = 0.945J [2](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.80.5196).
+In a cubic lattice this model has a phase transition at Tc = 0.945J [[2]](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.80.5196).
 
 ![cv_16](Graphs/Cv_16x16x16.png)
 
