@@ -64,7 +64,7 @@ Number of H-operators (n):
 
 Specific Heat:
 
-![cv](Graphs/cv.png)
+![cv](Graphs/Cv.png)
 
 Uniform Susceptibility:
 
