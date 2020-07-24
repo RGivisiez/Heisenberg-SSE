@@ -6,19 +6,19 @@ Module Variables
   ! lx=10, ly=10, lz=1 means a 2D square lattice.
   ! lx=10, ly=10, lz=10 means a 3D cubic lattice.
 
-  Integer*4, parameter :: lx = 10                     ! Number of spins in x.
-  Integer*4, parameter :: ly = 10                     ! Number of spins in y.
-  Integer*4, parameter :: lz = 10                     ! Number of spins in z.
+  Integer*4, parameter :: lx = 16                     ! Number of spins in x.
+  Integer*4, parameter :: ly = 16                     ! Number of spins in y.
+  Integer*4, parameter :: lz = 16                     ! Number of spins in z.
   Integer*4, parameter :: Nbins = 20                  ! Averages written to file after mcsteps.
-  Integer*4, parameter :: mcsteps = 1e5               ! Monte Carlo steps.
-  Integer*4, parameter :: term_steps = 1e5            ! Termalization steps.
+  Integer*4, parameter :: mcsteps = 1e4               ! Monte Carlo steps.
+  Integer*4, parameter :: term_steps = 1e4            ! Termalization steps.
   Integer*4, parameter :: N = lx * ly * lz            ! Total number of spins.
   Real*8,    parameter :: temp_ini = 1.4d0            ! Initial temperature.
-  Integer*4, parameter :: t_steps = 10                ! Number of temperature steps.
-  Real*8,    parameter :: dt = -0.1d0                 ! Size of temperature steps.
+  Integer*4, parameter :: t_steps = 29                ! Number of temperature steps.
+  Real*8,    parameter :: dt = -0.025d0                 ! Size of temperature steps.
 
-  Integer*4 :: NH = 0               ! Number of H-operator.
-  Integer*4 :: L = max(4, N / 4)    ! Maximum string size. (Don't change it)
+  Integer*4 :: NH                   ! Number of H-operator.
+  Integer*4 :: L                    ! Maximum string size. (Don't change it)
   Integer*4 :: d                    ! Dimension. (Selected by the program)
   Integer*4 :: Nb                   ! Number o bonds between spins. (N = d*lx*ly*lz)
 
@@ -29,7 +29,7 @@ Module Variables
   Integer*4, Allocatable, Dimension (:)   :: first_vertex_visitted ! First operator on each site in linked vertex list.
   Integer*4, Allocatable, Dimension (:)   :: last_vertex_visitted  ! Last operator on each site in linked vertex list.
 
-  Integer*4 :: NH_max = 0
+  Integer*4 :: NH_max
   Character*60 :: arq
 
   Real*8    :: beta
@@ -49,12 +49,15 @@ Program Main
   Open(40, file=arq, position='append')
 
   write(40, '(4x,"Beta",4x,"Energy",4x,"Specific Heat",4x,"Uniform Susceptibility", &
-           &  4x,"Staggered Magnetization",4x,"Number of H-operators",    &
+           &  4x,"Magnetization^2",4x,"Number of H-operators",    &
            &  4x,"(Number of H-operators)^2" )')
 
   Do t = 0, t_steps - 1
 
     beta = 1.0d0 / (temp_ini + dt * t)
+
+    NH = 0; NH_max = 0;
+    L = max(4, N / 4)
 
     Allocate(opstring(0:L - 1))
     Allocate(first_vertex_visitted(N), last_vertex_visitted(N))
@@ -243,14 +246,14 @@ Subroutine init
   write(*,'(1x,"Number of spins: ",I0)') N
   write(*,'(1x,"Number of bins: ",I0)') Nbins
   write(*,'(1x,"Monte Carlo steps: ",ES7.1)') dble(mcsteps)
-  write(*,'(1x,"Termalization steps: ",ES7.1)') dble(term_steps)  
-  write(*,'(1x,"Temperatures: ",F6.4," -> ",F6.4)') 1.0d0 / beta, temp_ini + t_steps * dt
+  write(*,'(1x,"Termalization steps: ",ES7.1)') dble(term_steps)
+  write(*,'(1x,"Temperatures: ",F6.4," -> ",F6.4)') 1.0d0 / beta, temp_ini + (t_steps - 1) * dt
 
   write(arq, '("bin_",I0,"x",I0,"x",I0,"_T=",F6.4,".dat")') lx, ly, lz, 1.0d0 / beta
   Open(10, file=arq)
 
   write(10, '(4x,"Energy",4x,"Specific Heat",4x,"Uniform Susceptibility", &
-           &  4x,"Staggered Magnetization",4x,"Number of H-operators",    &
+           &  4x,"Magnetization^2",4x,"Number of H-operators",    &
            &  4x,"(Number of H-operators)^2" )')
   
 
@@ -267,7 +270,7 @@ Subroutine init
 
 End Subroutine init
 
-Subroutine diagonalupdate()
+Subroutine diagonalupdate
 
   Use Variables
   Implicit None
@@ -293,6 +296,8 @@ Subroutine diagonalupdate()
   ! bouth a(p) or b(p) using the relations,
   ! a(p) = MOD(opstring[p], 2) + 1, and
   ! b(p) = opstring[p] / 2.
+
+  ! print*, step
 
   Do p = 0, L - 1
 
@@ -605,6 +610,8 @@ Subroutine write_results
 
   Real*8 :: Cv, ener
 
+  ! print*, n_opH, n_opH2, mcsteps
+
   n_opH = n_opH / dble(mcsteps)
   n_opH2 = n_opH2 / dble(mcsteps)
   ususc = ususc / dble(mcsteps)
@@ -612,7 +619,9 @@ Subroutine write_results
 
   ener = - ( n_opH / (beta * N) - 0.25d0 * dble(Nb) / dble(N))
 
-  Cv = (n_opH2 - n_opH * (n_opH + 1.0d0)) / dble(N)
+  Cv = (n_opH2 - n_opH**2 - n_opH) / dble(N)
+
+  ! Cv = (n_opH**2 - n_opH2 - n_opH) / dble(N)
 
   staggered = 3.d0 * staggered / dble(N)**2
 
