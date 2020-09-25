@@ -148,7 +148,7 @@ Module mean_and_error
 
     end do
 
-    mean_err = mean_err * ((N - 1) / N)
+    mean_err = mean_err * (dble(N - 1) / dble(N))
 
   End Subroutine jackknife
 

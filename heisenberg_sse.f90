@@ -104,7 +104,6 @@ Subroutine qmc_steps
   Implicit None
 
   Integer*4 i, j
-  Real*8 a
 
   Do j = 1, Nbins
 
@@ -119,8 +118,6 @@ Subroutine qmc_steps
       raw_NH(i) = NH
 
     end do
-
-    print*, raw_NH
 
     Do i = 1, mcsteps
       write(20) raw_NH(i)
