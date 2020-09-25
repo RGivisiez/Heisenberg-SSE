@@ -140,7 +140,15 @@ Module mean_and_error
 
     mean = sum(res_mean) / N
 
-    mean_err = sqrt(sum((res_mean - mean)**2))
+    mean_err = 0.0d0
+
+    Do i = 1, N
+
+      mean_err = mean_err + (res_mean(i) - mean)**2
+
+    end do
+
+    mean_err = mean_err * ((N - 1) / N)
 
   End Subroutine jackknife
 
