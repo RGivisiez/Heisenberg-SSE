@@ -6,16 +6,16 @@ Module Variables
   ! lx=10, ly=10, lz=1 means a 2D square lattice.
   ! lx=10, ly=10, lz=10 means a 3D cubic lattice.
 
-  Integer*4, parameter :: lx = 8                     ! Number of spins in x.
-  Integer*4, parameter :: ly = 8                     ! Number of spins in y.
-  Integer*4, parameter :: lz = 8                     ! Number of spins in z.
-  Integer*4, parameter :: Nbins = 2                  ! Averages written to file after mcsteps.
-  Integer*4, parameter :: mcsteps = 5               ! Monte Carlo steps.
-  Integer*4, parameter :: term_steps = 1e1            ! Termalization steps.
+  Integer*4, parameter :: lx = 16                     ! Number of spins in x.
+  Integer*4, parameter :: ly = 16                     ! Number of spins in y.
+  Integer*4, parameter :: lz = 16                     ! Number of spins in z.
+  Integer*4, parameter :: Nbins = 10                   ! Averages written to file after mcsteps.
+  Integer*4, parameter :: mcsteps = 1e6                 ! Monte Carlo steps.
+  Integer*4, parameter :: term_steps = 100*lx*ly*lz   ! Termalization steps.
   Integer*4, parameter :: N = lx * ly * lz            ! Total number of spins.
-  Real*8,    parameter :: temp_ini = 1.4d0            ! Initial temperature.
-  Integer*4, parameter :: t_steps = 1                ! Number of temperature steps.
-  Real*8,    parameter :: dt = -0.025d0                 ! Size of temperature steps.
+  Real*8,    parameter :: temp_ini = 0.97d0            ! Initial temperature.
+  Integer*4, parameter :: t_steps = 1                 ! Number of temperature steps.
+  Real*8,    parameter :: dt = -0.025d0               ! Size of temperature steps.
 
   Integer*4 :: NH                   ! Number of H-operator.
   Integer*4 :: L                    ! Maximum string size. (Don't change it)
@@ -125,6 +125,8 @@ Subroutine qmc_steps
     Do i = 1, mcsteps
       write(20) raw_NH(i)
     end do
+
+    Call flush()
 
   end do 
 
