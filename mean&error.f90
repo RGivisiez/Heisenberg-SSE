@@ -40,7 +40,7 @@ Module mean_and_error
 
     end do
 
-    mean_err = mean_err / (N * (N - 1))
+    mean_err = sqrt(mean_err / (N * (N - 1)))
 
   End Subroutine basic
 
@@ -148,7 +148,7 @@ Module mean_and_error
 
     end do
 
-    mean_err = mean_err * (dble(N - 1) / dble(N))
+    mean_err = sqrt(mean_err * (dble(N - 1) / dble(N)))
 
   End Subroutine jackknife
 
