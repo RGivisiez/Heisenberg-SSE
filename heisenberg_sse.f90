@@ -150,7 +150,7 @@ Subroutine lattice
     print*, '2D with Periodic boundary '
 
     d = 2                     
-    Nb = d * lx*ly            
+    Nb = d * lx * ly            
     Allocate(bound_spin_ID(2, Nb))
 
     Do i = 0, lx - 1
