@@ -293,6 +293,7 @@ Program Main
   Character*60 arq
   Integer*4 lx, ly, lz, mcsteps, Nbins, i
   Integer*4, Allocatable, Dimension (:)   :: raw_NH
+  Real*8, Allocatable, Dimension (:)   :: E
 
   Open(20, file='parameters.dat')
   
@@ -306,6 +307,7 @@ Program Main
   Open(20, file=arq, form='UNFORMATTED')
 
   Allocate(raw_NH(Nbins * mcsteps))
+  Allocate(E(Nbins * mcsteps))
 
   Do i = 1, Nbins * mcsteps
 
@@ -315,14 +317,15 @@ Program Main
 
   const = 3.0d0 * 0.25d0 * lx * ly * lz
 
-  ! raw_NH = - ((raw_NH / beta) - const)
+  E = - ((raw_NH / beta) - const)
+  E = E - minval(E)
 
-  Call binning(dble(raw_NH), mean, mean_err)
+  Call binning(dble(E), mean, mean_err)
 
-  Call basic(dble(raw_NH), mean, mean_err, .true.)
+  Call basic(dble(E), mean, mean_err, .true.)
 
-  Call bootstrap(dble(raw_NH), mean, mean_err, 50)
+  Call bootstrap(dble(E), mean, mean_err, 50)
 
-  Call jackknife(dble(raw_NH), mean, mean_err)
+  Call jackknife(dble(E), mean, mean_err)
 
 End Program Main
