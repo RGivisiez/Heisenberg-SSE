@@ -48,6 +48,7 @@ Module mean_and_error
       print*, mean, mean_err
 
       Call two_sigma_check(measurements, mean, mean_err)
+
     end if
 
   End Subroutine basic
@@ -262,11 +263,11 @@ Module mean_and_error
       mean = 0.0d0
       mean_err = 0.0d0
 
-      Call basic(mean_aux, mean, mean_err, .false.)
-
-      write(60, *) mean, mean_err
+      Call basic(mean_aux(:last_idx), mean, mean_err, .false.)
 
       if (N == size(measurements)) delta0 = mean_err
+
+      write(60, *) mean, mean_err, 0.5d0 * ( (mean_err / delta0)**2 - 1.0d0)
 
       N = last_idx
       last_idx = floor(dble(N) / 2.0d0)
@@ -275,7 +276,6 @@ Module mean_and_error
 
     print*, 'Binning:'
     print*, mean, mean_err
-    print*,'Tau:', 0.5d0 * ( (mean_err / delta0)**2 - 1.0d0), delta0, (mean_err / delta0)**2
     print*, ''
 
     Close(60)
@@ -315,7 +315,7 @@ Program Main
 
   const = 3.0d0 * 0.25d0 * lx * ly * lz
 
-  raw_NH = - ((raw_NH / beta) - const) / (lx * ly * lz)
+  ! raw_NH = - ((raw_NH / beta) - const)
 
   Call binning(dble(raw_NH), mean, mean_err)
 
