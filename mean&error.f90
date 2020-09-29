@@ -293,7 +293,7 @@ Program Main
   Character*60 arq
   Integer*4 lx, ly, lz, mcsteps, Nbins, i
   Integer*4, Allocatable, Dimension (:)   :: raw_NH
-  Real*8, Allocatable, Dimension (:)   :: E
+  Real*8, Allocatable, Dimension (:) :: E
 
   Open(20, file='parameters.dat')
   
