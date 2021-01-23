@@ -9,19 +9,20 @@ Module Variables
   Integer*4, parameter :: lx = 16                     ! Number of spins in x.
   Integer*4, parameter :: ly = 16                     ! Number of spins in y.
   Integer*4, parameter :: lz = 16                     ! Number of spins in z.
-  Integer*4, parameter :: Nbins = 20                  ! Averages written to file after mcsteps.
-  Integer*4, parameter :: mcsteps = 1e4               ! Monte Carlo steps.
-  Integer*4, parameter :: term_steps = 1e4            ! Termalization steps.
+  Integer*4, parameter :: Nbins = 10                   ! Averages written to file after mcsteps.
+  Integer*4, parameter :: mcsteps = 1e6                 ! Monte Carlo steps.
+  Integer*4, parameter :: term_steps = 100*lx*ly*lz   ! Termalization steps.
   Integer*4, parameter :: N = lx * ly * lz            ! Total number of spins.
-  Real*8,    parameter :: temp_ini = 1.4d0            ! Initial temperature.
-  Integer*4, parameter :: t_steps = 29                ! Number of temperature steps.
-  Real*8,    parameter :: dt = -0.025d0                 ! Size of temperature steps.
+  Real*8,    parameter :: temp_ini = 0.97d0            ! Initial temperature.
+  Integer*4, parameter :: t_steps = 1                 ! Number of temperature steps.
+  Real*8,    parameter :: dt = -0.025d0               ! Size of temperature steps.
 
   Integer*4 :: NH                   ! Number of H-operator.
   Integer*4 :: L                    ! Maximum string size. (Don't change it)
   Integer*4 :: d                    ! Dimension. (Selected by the program)
   Integer*4 :: Nb                   ! Number o bonds between spins. (N = d*lx*ly*lz)
 
+  Integer*4, Allocatable, Dimension (:)   :: raw_NH                ! NH value at every MC step.
   Integer*4, Allocatable, Dimension (:)   :: spin                  ! Spin value.
   Integer*4, Allocatable, Dimension (:)   :: opstring              ! Operator string ID.
   Integer*4, Allocatable, Dimension (:,:) :: bound_spin_ID         ! List of the spin sites connect between the bound_spin_ID(1, bound_idx) and bound_spin_ID(2, bound_idx)
@@ -45,13 +46,6 @@ Program Main
 
   Integer*4 t  
 
-  write(arq, '("results_",I0,"x",I0,"x",I0,".dat")') lx, ly, lz
-  Open(40, file=arq, position='append')
-
-  write(40, '(4x,"Beta",4x,"Energy",4x,"Specific Heat",4x,"Uniform Susceptibility", &
-           &  4x,"Magnetization^2",4x,"Number of H-operators",    &
-           &  4x,"(Number of H-operators)^2" )')
-
   Do t = 0, t_steps - 1
 
     beta = 1.0d0 / (temp_ini + dt * t)
@@ -65,6 +59,8 @@ Program Main
 
     opstring = 0
 
+    Allocate(raw_NH(mcsteps))
+
     Call lattice
     Call init
 
@@ -72,15 +68,11 @@ Program Main
 
     Call qmc_steps
 
-    Call results
-
     Call free_memory
 
     Call flush()
 
   end do
-
-  Close(40)
 
 End Program Main
 
@@ -115,20 +107,26 @@ Subroutine qmc_steps
 
   Do j = 1, Nbins
 
+    raw_NH = 0
+
     Do i = 1, mcsteps
 
       Call diagonalupdate
       Call linkvertices
       Call loopupdate
-      Call measure
+
+      raw_NH(i) = NH
 
     end do
 
-    Call write_results
+    Do i = 1, mcsteps
+      write(20) raw_NH(i)
+    end do
+
+    Call flush()
 
   end do 
 
-  Close(10)
   Close(20)
   Close(30)
 
@@ -152,7 +150,7 @@ Subroutine lattice
     print*, '2D with Periodic boundary '
 
     d = 2                     
-    Nb = d * lx*ly            
+    Nb = d * lx * ly            
     Allocate(bound_spin_ID(2, Nb))
 
     Do i = 0, lx - 1
@@ -249,24 +247,16 @@ Subroutine init
   write(*,'(1x,"Termalization steps: ",ES7.1)') dble(term_steps)
   write(*,'(1x,"Temperatures: ",F6.4," -> ",F6.4)') 1.0d0 / beta, temp_ini + (t_steps - 1) * dt
 
-  write(arq, '("bin_",I0,"x",I0,"x",I0,"_T=",F6.4,".dat")') lx, ly, lz, 1.0d0 / beta
-  Open(10, file=arq)
+  Open(90, file='parameters.dat')
+  write(90, '(10x,"Lx",10x,"Ly",10x,"Lz",10x,"Beta",10x,"MC Steps",10x,"Nº Bins")')
+  write(90, *) lx, ly, lz, beta, mcsteps, Nbins
+  Close(90)
 
-  write(10, '(4x,"Energy",4x,"Specific Heat",4x,"Uniform Susceptibility", &
-           &  4x,"Magnetization^2",4x,"Number of H-operators",    &
-           &  4x,"(Number of H-operators)^2" )')
-  
-
-  write(arq, '("raw_",I0,"x",I0,"x",I0,"_T=",F6.4,".dat")') lx, ly, lz, 1.0d0 / beta
-  Open(20, file=arq)
-
-  write(20, '(4x,"Number of H-operators")')
+  write(arq, '("raw_",I0,"x",I0,"x",I0,"_T=",F6.4)') lx, ly, lz, 1.0d0 / beta
+  Open(20, file=arq, form='UNFORMATTED')
 
   write(arq, '("cut-off_",I0,"x",I0,"x",I0,"_T=",F6.4,".dat")') lx, ly, lz, 1.0d0 / beta
   Open(30, file=arq)
-
-  write(30, '(4x,"Step",4x,"Cut-off",4x,"Number of H-operators", &
-           &  4x,"Maximum Number of H-operators" )')
 
 End Subroutine init
 
@@ -551,126 +541,6 @@ Subroutine adjustcutoff(step)
 
 End Subroutine adjustcutoff
 
-Subroutine measure
-
-  Use Variables
-  Implicit None
-
-
-  integer :: i, bound_idx, op, spin_idx1, spin_idx2, stag_mag
-  real(8) :: stag_mag2
-
-  stag_mag = 0
-
-  Do i = 1, N
-     stag_mag = stag_mag + spin(i) * (-1)**(mod(i - 1, lx) + (i - 1) / lx)
-  end do      
-
-  stag_mag = stag_mag / 2
-  stag_mag2 = 0.d0
-
-  Do i= 0, L - 1
-
-     op = opstring(i)
-
-     if (mod(op,2) == 1) then  
-
-        bound_idx = op / 2
-
-        spin_idx1 = bound_spin_ID(1, bound_idx)
-        spin_idx2 = bound_spin_ID(2, bound_idx)
-
-        spin(spin_idx1) = -spin(spin_idx1)
-        spin(spin_idx2) = -spin(spin_idx2)
-
-        stag_mag = stag_mag + 2 * spin(spin_idx1) * (-1)**(mod(spin_idx1 - 1, lx) + (spin_idx1 - 1) / lx)
-
-     end if
-
-     stag_mag2 = stag_mag2 + dfloat(stag_mag)**2
-
-  end do
-
-  stag_mag2 = stag_mag2 / dble(L)
-
-  staggered = staggered + stag_mag2
-  ususc = ususc + dble(sum(spin) / 2)**2
-
-  n_opH = n_opH + dble(NH)
-  n_opH2 = n_opH2 + dble(NH)**2
-
-  write(20, *) NH
-
-End Subroutine measure
-
-Subroutine write_results
-
-  Use Variables
-  Implicit None
-
-  Real*8 :: Cv, ener
-
-  ! print*, n_opH, n_opH2, mcsteps
-
-  n_opH = n_opH / dble(mcsteps)
-  n_opH2 = n_opH2 / dble(mcsteps)
-  ususc = ususc / dble(mcsteps)
-  staggered = staggered / dble(mcsteps)
-
-  ener = - ( n_opH / (beta * N) - 0.25d0 * dble(Nb) / dble(N))
-
-  Cv = (n_opH2 - n_opH**2 - n_opH) / dble(N)
-
-  ! Cv = (n_opH**2 - n_opH2 - n_opH) / dble(N)
-
-  staggered = 3.d0 * staggered / dble(N)**2
-
-  ususc = beta * ususc / dble(N)
-
-  n_opH = n_opH / dble(N)
-  n_opH2 = n_opH2 / dble(N)
-
-  write(10, *) ener, Cv, ususc, staggered, n_opH, n_opH2
-
-  n_opH = 0.0d0
-  n_opH2 = 0.0d0
-  ususc = 0.0d0
-  staggered = 0.0d0
-
-End Subroutine write_results
-
-Subroutine results
-
-  Use Variables
-  Implicit None
-
-  Real*8 :: e(Nbins), c(Nbins), n_op(Nbins), n_op2(Nbins), x(Nbins), stag(Nbins)
-  Integer*4 :: i
-
-  write(arq, '("bin_",I0,"x",I0,"x",I0,"_T=",F6.4,".dat")') lx, ly, lz, 1.0d0 / beta
-  Open(10, file=arq)
-
-  read(10, '(A)')
-
-  Do i = 1, Nbins
-
-    read(10, *) e(i), c(i), x(i), stag(i), n_op(i), n_op2(i)
-
-  end do 
-
-  Close(10)
-
-  e = e / dble(Nbins)
-  n_op = n_op / dble(Nbins)
-  n_op2 = n_op2 / dble(Nbins)
-  c = c / dble(Nbins)
-  x = x / dble(Nbins)
-  stag = stag / dble(Nbins)
-
-  write(40, *) beta, sum(e), sum(c), sum(x), sum(stag), sum(n_op), sum(n_op2)
-
-End Subroutine results
-
 Subroutine cut_off_analisys(L_new, step)
 
   Use Variables
@@ -704,5 +574,6 @@ Subroutine free_memory
   Deallocate(first_vertex_visitted)
   Deallocate(last_vertex_visitted)
   Deallocate(vertex_link)
+  Deallocate(raw_NH)
 
 End Subroutine free_memory
