@@ -287,13 +287,18 @@ End Module mean_and_error
 Program Main
 
   Use mean_and_error
+  Use moment_zeros_discrete
+  Use root_finder
   Implicit None
 
   Real*8 beta, mean, mean_err, const
   Character*60 arq
   Integer*4 lx, ly, lz, mcsteps, Nbins, i
   Integer*4, Allocatable, Dimension (:)   :: raw_NH
-  Real*8, Allocatable, Dimension (:) :: E
+  Real*16, Allocatable, Dimension (:) :: E
+  Real*16, Allocatable, Dimension(:) :: c
+  Real*16, Allocatable, Dimension(:) :: real_part_root, img_part_root, real_err, img_err
+  Real*16, Allocatable, Dimension(:) :: real_root, img_root
 
   Open(20, file='parameters.dat')
   
@@ -303,22 +308,22 @@ Program Main
   read(20, *) lx, ly, lz, beta, mcsteps, Nbins
   print*, lx, ly, lz, beta, mcsteps, Nbins
 
-  write(arq, '("raw_",I0,"x",I0,"x",I0,"_T=",F6.4)') lx, ly, lz, 1.0d0 / beta
-  Open(20, file=arq, form='UNFORMATTED')
+  write(arq, '("raw_",I0,"x",I0,"x",I0,"_T=",F6.4,".dat")') lx, ly, lz, 1.0d0 / beta
+  Open(20, file=arq)
+  ! write(arq, '("raw_",I0,"x",I0,"x",I0,"_T=",F6.4)') lx, ly, lz, 1.0d0 / beta
+  ! Open(20, file=arq, form='UNFORMATTED')
 
   Allocate(raw_NH(Nbins * mcsteps))
   Allocate(E(Nbins * mcsteps))
 
   Do i = 1, Nbins * mcsteps
-
-    read(20) raw_NH(i)
-
+    ! read(20) raw_NH(i)
+    read(20, *) raw_NH(i)
   end do
 
   const = 3.0d0 * 0.25d0 * lx * ly * lz
 
   E = - ((raw_NH / beta) - const)
-  E = E - minval(E)
 
   Call binning(dble(E), mean, mean_err)
 
