@@ -13,14 +13,15 @@ Module Variables
   Integer*4, parameter :: mcsteps = 1e4               ! Monte Carlo steps.
   Integer*4, parameter :: term_steps = 1e4            ! Termalization steps.
   Integer*4, parameter :: N = lx * ly * lz            ! Total number of spins.
-  Real*8,    parameter :: temp_ini = 1.4d0            ! Initial temperature.
-  Integer*4, parameter :: t_steps = 29                ! Number of temperature steps.
+  Real*8,    parameter :: temp_ini = 1.05d0            ! Initial temperature.
+  Integer*4, parameter :: t_steps = 1                ! Number of temperature steps.
   Real*8,    parameter :: dt = -0.025d0                 ! Size of temperature steps.
 
   Integer*4 :: NH                   ! Number of H-operator.
   Integer*4 :: L                    ! Maximum string size. (Don't change it)
   Integer*4 :: d                    ! Dimension. (Selected by the program)
   Integer*4 :: Nb                   ! Number o bonds between spins. (N = d*lx*ly*lz)
+  Integer*4 :: Nn
 
   Integer*4, Allocatable, Dimension (:)   :: spin                  ! Spin value.
   Integer*4, Allocatable, Dimension (:)   :: opstring              ! Operator string ID.
@@ -33,6 +34,8 @@ Module Variables
   Character*60 :: arq
 
   Real*8    :: beta
+  Real*8    :: rem_prob
+  Real*8    :: add_prob
   Real*8    :: n_opH = 0.0d0, n_opH2 = 0.0d0
   Real*8    :: ususc = 0.0d0, staggered = 0.0d0
 
@@ -52,6 +55,8 @@ Program Main
            &  4x,"Magnetization^2",4x,"Number of H-operators",    &
            &  4x,"(Number of H-operators)^2" )')
 
+  Do Nn = 0, 100
+
   Do t = 0, t_steps - 1
 
     beta = 1.0d0 / (temp_ini + dt * t)
@@ -68,15 +73,22 @@ Program Main
     Call lattice
     Call init
 
+    add_prob = 0.5d0 * beta * Nb
+    rem_prob = 1.0d0 / (0.5d0 * beta * Nb)
+
     Call termalization
 
     Call qmc_steps
 
     Call results
 
+    Call make_dist
+
     Call free_memory
 
     Call flush()
+
+  end do
 
   end do
 
@@ -248,6 +260,7 @@ Subroutine init
   write(*,'(1x,"Monte Carlo steps: ",ES7.1)') dble(mcsteps)
   write(*,'(1x,"Termalization steps: ",ES7.1)') dble(term_steps)
   write(*,'(1x,"Temperatures: ",F6.4," -> ",F6.4)') 1.0d0 / beta, temp_ini + (t_steps - 1) * dt
+  write(*,'(1x,"N: ",I0)') Nn
 
   write(arq, '("bin_",I0,"x",I0,"x",I0,"_T=",F6.4,".dat")') lx, ly, lz, 1.0d0 / beta
   Open(10, file=arq)
@@ -316,7 +329,7 @@ Subroutine diagonalupdate
 
         Call random_number(ran)
 
-        if (ran <= (0.5d0 * beta * Nb) / (L - NH)) then
+        if (ran * (NH + 1 - Nn) <= (add_prob / (L - NH)) * (NH + 1) ) then
 
           opstring(p) = 2 * bound_idx
           NH = NH + 1
@@ -330,7 +343,7 @@ Subroutine diagonalupdate
       
       Call random_number(ran)
 
-      if (ran <= (L - NH + 1) / (0.5d0 * beta * Nb)) then
+      if (ran * NH <= (L - NH + 1) * rem_prob * (NH - Nn) ) then
 
         opstring(p) = 0
         NH = NH - 1
@@ -599,7 +612,7 @@ Subroutine measure
   n_opH = n_opH + dble(NH)
   n_opH2 = n_opH2 + dble(NH)**2
 
-  write(20, *) NH
+  write(20, *) NH, - ( NH / (beta * N) - 0.25d0 * dble(Nb) / dble(N))
 
 End Subroutine measure
 
@@ -670,6 +683,82 @@ Subroutine results
   write(40, *) beta, sum(e), sum(c), sum(x), sum(stag), sum(n_op), sum(n_op2)
 
 End Subroutine results
+
+Subroutine make_dist
+
+  Use Variables
+  Implicit None
+
+  Integer*4 opn(Nbins * mcsteps), i, idx
+  Real*8  energy(Nbins * mcsteps)
+  Integer*4, Allocatable, Dimension(:) :: n_dist, e_dist
+  Real*8 energy_bin, e_min, e_max
+
+  energy_bin = 1.0d0 / (beta * N)
+
+  write(arq, '("raw_",I0,"x",I0,"x",I0,"_T=",F6.4,".dat")') lx, ly, lz, 1.0d0 / beta
+  Open(20, file=arq)
+
+  read(20, '(A)')
+
+  Do i = 1, Nbins * mcsteps
+
+    read(20, *) opn(i), energy(i)
+
+  end do
+
+  Close(20)
+
+  Allocate(n_dist(minval(opn):maxval(opn)))
+  n_dist = 0
+
+  Do i = 1, Nbins * mcsteps
+
+    n_dist(opn(i)) = n_dist(opn(i)) + 1
+
+  end do
+
+  write(arq, '("dist_n_",I0,"x",I0,"x",I0,"_T=",F6.4,"Nn=",I0,".dat")') lx, ly, lz, 1.0d0 / beta, Nn
+  Open(50, file=arq)
+
+  Do i = minval(opn), maxval(opn)
+
+    write(50, *) i, n_dist(i)
+
+  End do
+
+  Close(50)
+
+  e_min = minval(energy)
+  energy = energy - e_min
+
+  e_max = maxval(energy)
+
+  Allocate(e_dist(0: int(e_max / energy_bin)))
+
+  e_dist = 0 
+
+  Do i = 1, Nbins * mcsteps
+
+    idx = int(energy(i) / energy_bin)
+
+    e_dist(idx) = e_dist(idx) + 1
+
+  end do
+
+  write(arq, '("dist_e_",I0,"x",I0,"x",I0,"_T=",F6.4,"Nn=",I0,".dat")') lx, ly, lz, 1.0d0 / beta, Nn
+  Open(50, file=arq)
+
+  Do i = 0, int(e_max / energy_bin)
+
+    write(50, *) i * energy_bin + e_min, e_dist(i)
+
+  End do
+
+  Close(50)  
+
+
+End Subroutine make_dist
 
 Subroutine cut_off_analisys(L_new, step)
 
